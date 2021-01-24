@@ -1,14 +1,18 @@
 use std::collections::HashSet;
 use std::fs;
-use std::str::Chars;
+use std::str::{Chars, Lines};
 
 const INPUT_FILE: &str = "./input.txt";
 
-struct PassengerGroup<'a>(&'a str);
+struct PassengerGroup<'a>(Vec<DeclarationForm<'a>>);
 
 impl<'a> PassengerGroup<'a> {
-    fn declaration_forms(&self) -> Vec<DeclarationForm<'a>> {
-        self.0.lines().map(|line| DeclarationForm(line)).collect()
+    fn new(group_responses: Lines<'a>) -> Self {
+        Self(group_responses.map(|line| DeclarationForm(line)).collect())
+    }
+
+    fn declaration_forms(&self) -> &Vec<DeclarationForm<'a>> {
+        &self.0
     }
 
     fn unique_responses(&self) -> Vec<HashSet<char>> {
@@ -45,7 +49,7 @@ fn main() {
         .unwrap_or_else(|e| panic!("Could not read file at {}: {}", INPUT_FILE, e));
     let groups: Vec<PassengerGroup> = input
         .split("\n\n")
-        .map(|pg| PassengerGroup(pg))
+        .map(|input| PassengerGroup::new(input.lines()))
         .collect();
 
     println!(
