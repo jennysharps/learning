@@ -45,9 +45,7 @@ fn main() {
         .unwrap_or_else(|e| panic!("Could not read file at {}: {}", INPUT_FILE, e));
     let groups: Vec<PassengerGroup> = input
         .split("\n\n")
-        .collect::<Vec<&str>>()
-        .iter()
-        .map(|survey| PassengerGroup(survey))
+        .map(|pg| PassengerGroup(pg))
         .collect();
 
     println!(
