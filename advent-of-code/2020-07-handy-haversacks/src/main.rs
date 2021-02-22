@@ -69,7 +69,7 @@ fn run_part_1(bag_rules_map: &HashMap<String, BagRules>) {
 }
 
 fn run_part_2(bag_rules_map: &HashMap<String, BagRules>) {
-    let count = individual_bags_count(NEEDLE_BAG_COLOR, &bag_rules_map);
+    let count = individual_bags_count(bag_rules_map, NEEDLE_BAG_COLOR);
     println!(
         "Part 2: How many individual bags are required inside your *{}* bag?: {}",
         NEEDLE_BAG_COLOR, count
@@ -110,12 +110,14 @@ fn possible_bags_count(bag_rules_map: &HashMap<String, BagRules>) -> u32 {
     count
 }
 
-fn individual_bags_count(color: &'_ str, bag_rules_map: &HashMap<String, BagRules>) -> u32 {
-    let mut total_count = 0;
-    let bag_rules = bag_rules_map.get(color).expect("color not found ");
-    for (nested_color, count) in bag_rules.iter() {
-        let nested_count = individual_bags_count(nested_color, bag_rules_map);
-        total_count += count + count * nested_count;
-    }
-    total_count
+fn individual_bags_count(bag_rules_map: &HashMap<String, BagRules>, color: &'_ str) -> u32 {
+    bag_rules_map
+        .get(color)
+        .expect("color not found ")
+        .iter()
+        .fold(0, |acc_count, (nested_color, nested_count)| {
+            acc_count
+                + nested_count
+                + nested_count * individual_bags_count(bag_rules_map, nested_color)
+        })
 }
