@@ -1,15 +1,15 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::str::FromStr;
 
 static INPUT_FILE: &str = "./input.txt";
 
-struct Innstructions<'a> {
+struct Instructions<'a> {
     inner: &'a [Instruction],
     next_index: usize,
 }
 
-impl<'a> Innstructions<'a> {
+impl<'a> Instructions<'a> {
     fn new_from(instructions: &'a [Instruction]) -> Self {
         Self {
             inner: instructions,
@@ -18,11 +18,10 @@ impl<'a> Innstructions<'a> {
     }
 }
 
-impl<'a> Iterator for Innstructions<'a> {
+impl<'a> Iterator for Instructions<'a> {
     type Item = &'a Instruction;
 
     fn next(&mut self) -> Option<&'a Instruction> {
-        use std::convert::TryFrom;
         let current_index = self.next_index;
         let instruction = self.inner.get(current_index);
 
@@ -32,6 +31,7 @@ impl<'a> Iterator for Innstructions<'a> {
                     self.next_index = current_index + 1;
                 }
                 Operation::Jmp => {
+                    use std::convert::TryFrom;
                     let current_index =
                         i16::try_from(current_index).expect("usize did not fit i16");
                     self.next_index = usize::try_from(current_index + instruction.argument)
@@ -49,6 +49,16 @@ enum Operation {
     Acc,
     Jmp,
     NoOp,
+}
+
+impl Operation {
+    fn reversed(&self) -> Option<Self> {
+        match self {
+            Self::Jmp => Some(Self::NoOp),
+            Self::NoOp => Some(Self::Jmp),
+            _ => None,
+        }
+    }
 }
 
 impl FromStr for Operation {
@@ -96,19 +106,53 @@ fn main() {
         .map(|(i, line)| Instruction::try_new_from(i, line).expect("Could not parse instruction"))
         .collect::<Vec<Instruction>>();
 
-    let mut acc: i16 = 0;
-    let handler = Innstructions::new_from(&instructions);
-    let mut mem_cache: HashMap<usize, i16> = HashMap::new();
+    run_part_1(&instructions);
+    run_part_2(&instructions);
+}
 
-    for instruction in handler {
-        if mem_cache.get(&instruction.id).is_some() {
+fn run_part_1(instructions: &[Instruction]) {
+    let mut acc: i16 = 0;
+    let mut processed_ids: HashSet<usize> = HashSet::new();
+
+    for instruction in Instructions::new_from(&instructions) {
+        if processed_ids.get(&instruction.id).is_some() {
             break;
         }
         if let Operation::Acc = instruction.operation {
             acc += instruction.argument;
         }
-        mem_cache.insert(instruction.id, acc);
+        processed_ids.insert(instruction.id);
     }
+    println!("Part 1: What value is in the accumulator?: {:?}", &acc);
+}
 
-    println!("What value is in the accumulator?: {:?}", &acc);
+fn run_part_2(instructions: &[Instruction]) {
+    let mut reversed_indexes = HashSet::new();
+
+    'outer: for instruction in instructions.iter() {
+        let mut acc: i16 = 0;
+        let mut changed_instructions = instructions.to_owned();
+        let mut processed_ids: HashSet<usize> = HashSet::new();
+
+        // Change the next reversable instruction
+        if !reversed_indexes.contains(&instruction.id) {
+            if let Some(reverse_operation) = instruction.operation.reversed() {
+                changed_instructions[instruction.id].operation = reverse_operation.clone();
+                reversed_indexes.insert(instruction.id);
+            };
+        }
+
+        for instruction in Instructions::new_from(&changed_instructions) {
+            if processed_ids.get(&instruction.id).is_some() {
+                // Infinite loop detected
+                continue 'outer;
+            }
+            if let Operation::Acc = instruction.operation {
+                acc += instruction.argument;
+            }
+            processed_ids.insert(instruction.id);
+        }
+        println!("Part 2: What is the value of the accumulator after the program terminates?: {:?}", &acc);
+        break;
+    }
 }
